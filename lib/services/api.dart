@@ -13,7 +13,7 @@ class API {
 
   void init() {
     BaseOptions options = BaseOptions(
-      baseUrl: 'http://192.168.0.108:8000',
+      baseUrl: 'http://127.0.0.1:8000',
     );
 
     dio = Dio(options);

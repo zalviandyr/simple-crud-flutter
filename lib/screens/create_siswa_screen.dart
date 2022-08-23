@@ -16,8 +16,11 @@ class CreateSiswaScreen extends StatefulWidget {
 class _CreateSiswaScreenState extends State<CreateSiswaScreen> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _dateController = TextEditingController();
+  final TextEditingController _bookTitleController = TextEditingController();
+  final TextEditingController _bookPageController = TextEditingController();
   final List<String> _class = ['XI MIPA 1', 'XI MIPA 2', 'XI MIPA 3'];
   final GlobalKey<FormState> _form = GlobalKey();
+  final ValueNotifier<List<BookModel>> _books = ValueNotifier([]);
   late SiswaBloc _siswaBloc;
   String? _selectedClass;
   DateTime? _selectedDate;
@@ -34,6 +37,8 @@ class _CreateSiswaScreenState extends State<CreateSiswaScreen> {
   void dispose() {
     _nameController.dispose();
     _dateController.dispose();
+    _bookTitleController.dispose();
+    _bookPageController.dispose();
 
     super.dispose();
   }
@@ -53,12 +58,71 @@ class _CreateSiswaScreenState extends State<CreateSiswaScreen> {
     }
   }
 
+  void _addBookAction() {
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'add_book_dialog',
+      pageBuilder: (context, a1, a2) {
+        return Dialog(
+          child: Padding(
+            padding: const EdgeInsets.all(10),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: _bookTitleController,
+                  decoration: const InputDecoration(
+                    hintText: 'Title',
+                  ),
+                ),
+                TextFormField(
+                  controller: _bookPageController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    hintText: 'Page',
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    BookModel book = BookModel(
+                      title: _bookTitleController.text.trim(),
+                      page: int.parse(_bookPageController.text.trim()),
+                    );
+
+                    // buat list baru untuk trigger agar biar state ke update
+                    _books.value = List.from(_books.value)..add(book);
+
+                    _bookTitleController.clear();
+                    _bookPageController.clear();
+
+                    Get.back();
+                  },
+                  child: const Text('Add Book'),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+      transitionBuilder: (context, a1, a2, child) {
+        double curve = Curves.elasticInOut.transform(a1.value);
+
+        return Transform.scale(
+          scale: curve,
+          child: child,
+        );
+      },
+    );
+  }
+
   void _submitAction() {
     if (_form.currentState!.validate()) {
       SiswaModel siswa = SiswaModel(
         nama: _nameController.text.trim(),
         kelas: _selectedClass!,
         tanggalLahir: _selectedDate!,
+        books: [],
       );
 
       _siswaBloc.add(SiswaCreate(siswa: siswa));
@@ -122,6 +186,46 @@ class _CreateSiswaScreenState extends State<CreateSiswaScreen> {
                 ),
               ),
               const SizedBox(height: 50),
+              ElevatedButton(
+                onPressed: _addBookAction,
+                style: ElevatedButton.styleFrom(
+                  primary: Colors.green,
+                ),
+                child: const Text('Add Book'),
+              ),
+              const SizedBox(height: 20),
+              ValueListenableBuilder<List<BookModel>>(
+                valueListenable: _books,
+                builder: (context, books, child) {
+                  return Column(
+                    children: books
+                        .asMap()
+                        .entries
+                        .map((e) => Row(
+                              children: [
+                                Text(e.value.title),
+                                const SizedBox(width: 20),
+                                Text(e.value.page.toString()),
+                                const Spacer(),
+                                IconButton(
+                                  onPressed: () {
+                                    int index = e.key;
+
+                                    List<BookModel> books2 =
+                                        List.from(_books.value);
+                                    books2.removeAt(index);
+
+                                    _books.value = books2;
+                                  },
+                                  icon: Icon(Icons.delete),
+                                ),
+                              ],
+                            ))
+                        .toList(),
+                  );
+                },
+              ),
+              const SizedBox(height: 20),
               _isLoading
                   ? Wrap(
                       alignment: WrapAlignment.center,
